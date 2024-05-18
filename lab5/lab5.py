@@ -4,7 +4,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 from scipy.signal import iirfilter, filtfilt
 
-
+# Функція створення зашумленої гармоніки
 def harmonic_with_noise(amplitude, frequency, phase, noise_mean, noise_covariance, show_noise):
     t = np.linspace(0, 1, 1000)
     harmonic_signal = amplitude * np.sin(2 * np.pi * frequency * t + phase)
@@ -21,6 +21,7 @@ class HarmonicGUI:
         self.master = master
         master.title("Harmonic with Noise and Filter")
 
+        # Ініціалізація змінних для параметрів сигналу та фільтра
         self.amplitude = tk.DoubleVar(value=1.0)
         self.frequency = tk.DoubleVar(value=1.0)
         self.phase = tk.DoubleVar(value=0.0)
@@ -31,6 +32,7 @@ class HarmonicGUI:
         self.filter_order = tk.IntVar(value=4)
         self.cutoff_frequency = tk.DoubleVar(value=1.0)
 
+        # Створення графіка для відображення сигналу
         self.fig, self.ax = plt.subplots()
         self.plot, = self.ax.plot([], [], label='Signal with Noise')
         self.filtered_plot, = self.ax.plot([], [], label='Filtered Signal', linestyle='--')
@@ -38,6 +40,7 @@ class HarmonicGUI:
         self.canvas = FigureCanvasTkAgg(self.fig, master=master)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+        # Створення елементів управління для налаштування параметрів
         self.create_sliders()
         self.create_filter_controls()
         self.reset_button = tk.Button(master, text="Reset", command=self.reset_parameters)
@@ -46,6 +49,7 @@ class HarmonicGUI:
         self.update_plot()
 
     def create_sliders(self):
+        # Створення повзунків для налаштування параметрів гармонічного сигналу та шуму
         self.amplitude_slider = tk.Scale(self.master, label="Amplitude", from_=0.1, to=10.0, resolution=0.1,
                                          orient=tk.HORIZONTAL, variable=self.amplitude,
                                          command=self.update_plot)
@@ -76,6 +80,7 @@ class HarmonicGUI:
         self.show_noise_checkbox.pack()
 
     def create_filter_controls(self):
+        # Створення повзунків та чекбоксу для налаштування параметрів фільтра
         self.filter_order_slider = tk.Scale(self.master, label="Filter Order", from_=1, to=10, resolution=1,
                                             orient=tk.HORIZONTAL, variable=self.filter_order,
                                             command=self.update_plot)
@@ -91,11 +96,13 @@ class HarmonicGUI:
         self.show_filtered_checkbox.pack()
 
     def update_plot(self, event=None):
+        # Оновлення графіка при зміні параметрів
         t, signal_with_noise, harmonic_signal = harmonic_with_noise(self.amplitude.get(), self.frequency.get(), self.phase.get(),
                                                                     self.noise_mean.get(), self.noise_covariance.get(), self.show_noise.get())
         self.plot.set_data(t, signal_with_noise)
 
         if self.show_filtered.get():
+            # Застосування фільтра до сигналу
             b, a = iirfilter(self.filter_order.get(), self.cutoff_frequency.get() / (0.5 * 1000), btype='low', ftype='butter')
             filtered_signal = filtfilt(b, a, signal_with_noise)
             self.filtered_plot.set_data(t, filtered_signal)
@@ -108,6 +115,7 @@ class HarmonicGUI:
         self.canvas.draw()
 
     def reset_parameters(self):
+        # Скидання параметрів до значень за замовчуванням
         self.amplitude.set(1.0)
         self.frequency.set(1.0)
         self.phase.set(0.0)

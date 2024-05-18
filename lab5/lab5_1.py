@@ -24,6 +24,7 @@ def create_slider(id, min, max, step, value, marks):
 app.layout = html.Div([
     html.H1("Harmonic with Noise and Filter"),
     html.Div([
+        # Повзунки для різних параметрів
         html.Div([
             html.Label('Amplitude'),
             create_slider('amplitude-slider', 0.1, 10, 0.1, 1, {i: str(i) for i in range(0, 11)}),
@@ -45,6 +46,7 @@ app.layout = html.Div([
             create_slider('noise-cov-slider', 0.01, 1, 0.01, 0.1, {i/10: str(i/10) for i in range(0, 11)}),
         ], style={'margin': '10px 0'}),
         html.Div([
+            # Дроп меню для вибору сигналів для відображення
             html.Label('Select Signal to Show'),
             dcc.Dropdown(
                 id='signal-dropdown',
@@ -57,9 +59,11 @@ app.layout = html.Div([
                 multi=True
             )
         ], style={'margin': '10px 0'}),
+        # Reset
         html.Button('Reset', id='reset-button', n_clicks=0, style={'margin': '20px 0'})
     ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top'}),
     html.Div([
+        # Самі графіки
         dcc.Graph(id='harmonic-graph', style={'display': 'none'}),
         dcc.Graph(id='noise-graph', style={'display': 'none'}),
         dcc.Graph(id='filtered-graph', style={'display': 'none'}),
@@ -90,6 +94,7 @@ app.layout = html.Div([
 def update_graph(amplitude, frequency, phase, noise_mean, noise_cov, selected_signals, n_clicks):
     ctx = dash.callback_context
     
+    # Скинути значення якщо натиснути ресет
     if ctx.triggered and ctx.triggered[0]['prop_id'] == 'reset-button.n_clicks':
         amplitude = 1
         frequency = 1
@@ -116,6 +121,7 @@ def update_graph(amplitude, frequency, phase, noise_mean, noise_cov, selected_si
     fig_noise.update_layout(title='Signal with Noise', xaxis_title='Time', yaxis_title='Amplitude')
     fig_filtered.update_layout(title='Filtered Signal', xaxis_title='Time', yaxis_title='Amplitude')
     
+    # Встановлення стилю відображення для кожного графіка
     style_harmonic = {'display': 'block'} if 'harmonic' in selected_signals else {'display': 'none'}
     style_noise = {'display': 'block'} if 'noise' in selected_signals else {'display': 'none'}
     style_filtered = {'display': 'block'} if 'filtered' in selected_signals else {'display': 'none'}
