@@ -29,7 +29,6 @@ class HarmonicGUI:
         self.noise_covariance = tk.DoubleVar(value=0.1)
         self.show_noise = tk.BooleanVar(value=False)
         self.show_filtered = tk.BooleanVar(value=False)
-        self.filter_order = tk.IntVar(value=4)
         self.cutoff_frequency = tk.DoubleVar(value=1.0)
 
         # Створення графіка для відображення сигналу
@@ -80,12 +79,7 @@ class HarmonicGUI:
         self.show_noise_checkbox.pack()
 
     def create_filter_controls(self):
-        # Створення повзунків та чекбоксу для налаштування параметрів фільтра
-        self.filter_order_slider = tk.Scale(self.master, label="Filter Order", from_=1, to=10, resolution=1,
-                                            orient=tk.HORIZONTAL, variable=self.filter_order,
-                                            command=self.update_plot)
-        self.filter_order_slider.pack()
-
+        # Створення повзунка та чекбоксу для налаштування параметрів фільтра
         self.cutoff_frequency_slider = tk.Scale(self.master, label="Cutoff Frequency", from_=0.1, to=10.0, resolution=0.1,
                                                 orient=tk.HORIZONTAL, variable=self.cutoff_frequency,
                                                 command=self.update_plot)
@@ -103,7 +97,7 @@ class HarmonicGUI:
 
         if self.show_filtered.get():
             # Застосування фільтра до сигналу
-            b, a = iirfilter(self.filter_order.get(), self.cutoff_frequency.get() / (0.5 * 1000), btype='low', ftype='butter')
+            b, a = iirfilter(4, self.cutoff_frequency.get() / (0.5 * 1000), btype='low', ftype='butter')
             filtered_signal = filtfilt(b, a, signal_with_noise)
             self.filtered_plot.set_data(t, filtered_signal)
             self.filtered_plot.set_visible(True)
@@ -123,7 +117,6 @@ class HarmonicGUI:
         self.noise_covariance.set(0.1)
         self.show_noise.set(False)
         self.show_filtered.set(False)
-        self.filter_order.set(4)
         self.cutoff_frequency.set(1.0)
         self.update_plot()
 
