@@ -4,16 +4,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 from scipy.signal import iirfilter, filtfilt
 
-# Функція створення зашумленої гармоніки
-def harmonic_with_noise(amplitude, frequency, phase, noise_mean, noise_covariance, show_noise):
-    t = np.linspace(0, 1, 1000)
-    harmonic_signal = amplitude * np.sin(2 * np.pi * frequency * t + phase)
-    if show_noise:
-        noise = np.random.normal(noise_mean, np.sqrt(noise_covariance), t.shape)
-        signal_with_noise = harmonic_signal + noise
-        return t, signal_with_noise, harmonic_signal
-    else:
-        return t, harmonic_signal, harmonic_signal
+
+def harmonic_signal(t, amplitude, frequency, phase):
+    return amplitude * np.sin(2 * np.pi * frequency * t + phase)
+
+
+def generate_noise(t, noise_mean, noise_covariance):
+    return np.random.normal(noise_mean, np.sqrt(noise_covariance), t.shape)
 
 
 class HarmonicGUI:
@@ -21,7 +18,6 @@ class HarmonicGUI:
         self.master = master
         master.title("Harmonic with Noise and Filter")
 
-        # Ініціалізація змінних для параметрів сигналу та фільтра
         self.amplitude = tk.DoubleVar(value=1.0)
         self.frequency = tk.DoubleVar(value=1.0)
         self.phase = tk.DoubleVar(value=0.0)
@@ -31,24 +27,32 @@ class HarmonicGUI:
         self.show_filtered = tk.BooleanVar(value=False)
         self.cutoff_frequency = tk.DoubleVar(value=1.0)
 
-        # Створення графіка для відображення сигналу
+        self.prev_amplitude = self.amplitude.get()
+        self.prev_frequency = self.frequency.get()
+        self.prev_phase = self.phase.get()
+        self.prev_noise_mean = self.noise_mean.get()
+        self.prev_noise_covariance = self.noise_covariance.get()
+
         self.fig, self.ax = plt.subplots()
-        self.plot, = self.ax.plot([], [], label='Signal with Noise')
-        self.filtered_plot, = self.ax.plot([], [], label='Filtered Signal', linestyle='--')
+        self.harmonic_plot, = self.ax.plot([], [], label='Harmonic Signal', color='blue')
+        self.noise_plot, = self.ax.plot([], [], label='Signal with Noise', color='red')
+        self.filtered_plot, = self.ax.plot([], [], label='Filtered Signal', linestyle='--', color='green')
         self.ax.legend()
         self.canvas = FigureCanvasTkAgg(self.fig, master=master)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        # Створення елементів управління для налаштування параметрів
         self.create_sliders()
         self.create_filter_controls()
         self.reset_button = tk.Button(master, text="Reset", command=self.reset_parameters)
         self.reset_button.pack()
 
+        self.t = np.linspace(0, 1, 1000)
+        self.current_signal = harmonic_signal(self.t, self.amplitude.get(), self.frequency.get(), self.phase.get())
+        self.current_noise = generate_noise(self.t, self.noise_mean.get(), self.noise_covariance.get())
+
         self.update_plot()
 
     def create_sliders(self):
-        # Створення повзунків для налаштування параметрів гармонічного сигналу та шуму
         self.amplitude_slider = tk.Scale(self.master, label="Amplitude", from_=0.1, to=10.0, resolution=0.1,
                                          orient=tk.HORIZONTAL, variable=self.amplitude,
                                          command=self.update_plot)
@@ -79,7 +83,6 @@ class HarmonicGUI:
         self.show_noise_checkbox.pack()
 
     def create_filter_controls(self):
-        # Створення повзунка та чекбоксу для налаштування параметрів фільтра
         self.cutoff_frequency_slider = tk.Scale(self.master, label="Cutoff Frequency", from_=0.1, to=10.0, resolution=0.1,
                                                 orient=tk.HORIZONTAL, variable=self.cutoff_frequency,
                                                 command=self.update_plot)
@@ -90,26 +93,42 @@ class HarmonicGUI:
         self.show_filtered_checkbox.pack()
 
     def update_plot(self, event=None):
-        # Оновлення графіка при зміні параметрів
-        t, signal_with_noise, harmonic_signal = harmonic_with_noise(self.amplitude.get(), self.frequency.get(), self.phase.get(),
-                                                                    self.noise_mean.get(), self.noise_covariance.get(), self.show_noise.get())
-        self.plot.set_data(t, signal_with_noise)
+        if self.amplitude.get() != self.prev_amplitude or self.frequency.get() != self.prev_frequency or self.phase.get() != self.prev_phase:
+            self.current_signal = harmonic_signal(self.t, self.amplitude.get(), self.frequency.get(), self.phase.get())
+            self.prev_amplitude = self.amplitude.get()
+            self.prev_frequency = self.frequency.get()
+            self.prev_phase = self.phase.get()
+
+        if self.noise_mean.get() != self.prev_noise_mean or self.noise_covariance.get() != self.prev_noise_covariance:
+            self.current_noise = generate_noise(self.t, self.noise_mean.get(), self.noise_covariance.get())
+            self.prev_noise_mean = self.noise_mean.get()
+            self.prev_noise_covariance = self.noise_covariance.get()
+
+        if self.show_noise.get():
+            signal_with_noise = self.current_signal + self.current_noise
+        else:
+            signal_with_noise = self.current_signal
+
+        self.harmonic_plot.set_data(self.t, self.current_signal)
+        self.noise_plot.set_data(self.t, signal_with_noise)
 
         if self.show_filtered.get():
-            # Застосування фільтра до сигналу
-            b, a = iirfilter(4, self.cutoff_frequency.get() / (0.5 * 1000), btype='low', ftype='butter')
+            nyquist = 0.5 * len(self.t)
+            normal_cutoff = self.cutoff_frequency.get() / nyquist
+            b, a = iirfilter(4, normal_cutoff, btype='low', analog=False, ftype='butter')
             filtered_signal = filtfilt(b, a, signal_with_noise)
-            self.filtered_plot.set_data(t, filtered_signal)
+            self.filtered_plot.set_data(self.t, filtered_signal)
             self.filtered_plot.set_visible(True)
         else:
             self.filtered_plot.set_visible(False)
 
         self.ax.set_xlim(0, 1)
         self.ax.set_ylim(-10, 10)
+        self.ax.relim()
+        self.ax.autoscale_view()
         self.canvas.draw()
 
     def reset_parameters(self):
-        # Скидання параметрів до значень за замовчуванням
         self.amplitude.set(1.0)
         self.frequency.set(1.0)
         self.phase.set(0.0)
@@ -118,6 +137,13 @@ class HarmonicGUI:
         self.show_noise.set(False)
         self.show_filtered.set(False)
         self.cutoff_frequency.set(1.0)
+        self.prev_amplitude = self.amplitude.get()
+        self.prev_frequency = self.frequency.get()
+        self.prev_phase = self.phase.get()
+        self.prev_noise_mean = self.noise_mean.get()
+        self.prev_noise_covariance = self.noise_covariance.get()
+        self.current_signal = harmonic_signal(self.t, self.amplitude.get(), self.frequency.get(), self.phase.get())
+        self.current_noise = generate_noise(self.t, self.noise_mean.get(), self.noise_covariance.get())
         self.update_plot()
 
 
